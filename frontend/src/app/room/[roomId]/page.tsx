@@ -34,6 +34,15 @@ export default function RoomPage() {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [micEnabled, setMicEnabled] = useState(true);
     const [videoEnabled, setVideoEnabled] = useState(true);
+    const [pinnedTrack, setPinnedTrack] = useState<TrackReferenceOrPlaceholder | null>(null);
+
+    const tracks = useTracks(
+        [
+            { source: Track.Source.Camera, withPlaceholder: true },
+            { source: Track.Source.ScreenShare, withPlaceholder: false },
+        ],
+        { onlySubscribed: false },
+    );
 
     useEffect(() => {
         const storedName = localStorage.getItem('meet_user_name') || `User-${Math.floor(Math.random() * 1000)}`;
@@ -84,18 +93,28 @@ export default function RoomPage() {
                     serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL || 'wss://qiq-meet-0bahqf48.livekit.cloud'}
                     data-lk-theme="default"
                     connect={true}
-                    className="flex-1 flex flex-col"
+                    className="flex-1 flex flex-col min-h-0"
                 >
                     <RoomHeader title={`Meeting: ${roomId}`} />
 
-                    <div className="flex-1 min-h-0 relative flex">
+                    <div className="flex-1 min-h-0 relative flex overflow-hidden">
                         <div className="flex-1 min-h-0 relative">
-                            <AdaptiveGrid />
+                            <AdaptiveGrid
+                                tracks={tracks}
+                                pinnedTrack={pinnedTrack}
+                                setPinnedTrack={setPinnedTrack}
+                            />
                             <ReactionOverlay />
                         </div>
 
                         <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
-                        <ParticipantsSidebar isOpen={isParticipantsOpen} onClose={() => setIsParticipantsOpen(false)} />
+                        <ParticipantsSidebar
+                            isOpen={isParticipantsOpen}
+                            onClose={() => setIsParticipantsOpen(false)}
+                            tracks={tracks}
+                            pinnedTrack={pinnedTrack}
+                            setPinnedTrack={setPinnedTrack}
+                        />
                     </div>
 
                     <MeetingControls
@@ -262,17 +281,15 @@ function RoomHeader({ title }: { title: string }) {
     );
 }
 
-function AdaptiveGrid() {
-    const tracks = useTracks(
-        [
-            { source: Track.Source.Camera, withPlaceholder: true },
-            { source: Track.Source.ScreenShare, withPlaceholder: false },
-        ],
-        { onlySubscribed: false },
-    );
-
-    const [pinnedTrack, setPinnedTrack] = useState<TrackReferenceOrPlaceholder | null>(null);
-
+function AdaptiveGrid({
+    tracks,
+    pinnedTrack,
+    setPinnedTrack
+}: {
+    tracks: TrackReferenceOrPlaceholder[],
+    pinnedTrack: TrackReferenceOrPlaceholder | null,
+    setPinnedTrack: (t: TrackReferenceOrPlaceholder | null) => void
+}) {
     const togglePin = (track: TrackReferenceOrPlaceholder) => {
         if (pinnedTrack?.participant.sid === track.participant.sid && pinnedTrack?.source === track.source) {
             setPinnedTrack(null);
@@ -282,26 +299,29 @@ function AdaptiveGrid() {
     };
 
     if (pinnedTrack && tracks.length > 1) {
-        const otherTracks = tracks.filter(t => t.participant.sid !== pinnedTrack.participant.sid || t.source !== pinnedTrack.source);
+        const otherTracks = tracks
+            .filter(t => t.participant.sid !== pinnedTrack.participant.sid || t.source !== pinnedTrack.source)
+            .slice(0, 3); // Limit to 3 cams on side
+
         return (
-            <div className="flex flex-col md:flex-row h-full w-full gap-4 p-4">
-                <div className="flex-[3] relative rounded-2xl overflow-hidden glass-card shadow-2xl transition-all duration-500">
+            <div className="flex flex-col md:flex-row h-full w-full gap-4 p-4 min-h-0 overflow-hidden">
+                <div className="flex-[3] relative rounded-2xl overflow-hidden glass-card shadow-2xl transition-all duration-500 min-h-0">
                     <FocusLayout trackRef={pinnedTrack}>
                         <ParticipantTile />
                         <button
                             onClick={() => setPinnedTrack(null)}
-                            className="absolute top-6 right-6 p-4 bg-red-500 text-white rounded-full shadow-2xl z-20 hover:scale-110 active:scale-95 transition-all flex items-center gap-2 font-bold"
+                            className="absolute top-6 right-6 p-4 bg-red-500/80 hover:bg-red-500 text-white rounded-full shadow-2xl z-20 hover:scale-110 active:scale-95 transition-all flex items-center gap-2 font-bold backdrop-blur-md"
                             title="Unpin User"
                         >
                             <PinOff size={20} />
-                            <span>Unpin</span>
+                            <span className="hidden sm:inline">Unpin</span>
                         </button>
                     </FocusLayout>
                 </div>
                 {otherTracks.length > 0 && (
-                    <div className="flex-1 flex flex-col gap-4 overflow-y-auto max-h-full pr-2 custom-scrollbar">
+                    <div className="flex-1 flex flex-col gap-4 overflow-y-auto max-h-full pr-2 custom-scrollbar min-h-0">
                         {otherTracks.map(track => (
-                            <div key={`${track.participant.sid}-${track.source}`} className="aspect-video relative rounded-2xl overflow-hidden glass-card min-h-[160px] group border border-white/5 hover:border-blue-500/50 transition-colors">
+                            <div key={`${track.participant.sid}-${track.source}`} className="aspect-video relative rounded-2xl overflow-hidden glass-card min-h-[140px] group border border-white/5 hover:border-blue-500/50 transition-colors">
                                 <ParticipantTile trackRef={track} />
                                 <button
                                     onClick={() => togglePin(track)}
@@ -320,7 +340,6 @@ function AdaptiveGrid() {
 
     return (
         <GridLayout tracks={tracks} className="grid-layout">
-            {/* GridLayout will automatically clone children and pass trackRef */}
             <div className="relative group h-full w-full">
                 <ParticipantTile />
                 <PinButton onPin={togglePin} />
@@ -378,7 +397,7 @@ function MeetingControls({ onToggleChat, onToggleParticipants, onToggleSettings 
     };
 
     return (
-        <div className="h-24 bg-[#1A1A1A]/95 backdrop-blur-2xl px-8 flex items-center justify-between relative z-40 border-t border-white/5">
+        <div className="h-24 bg-[#1A1A1A]/95 backdrop-blur-2xl px-8 flex items-center justify-between relative z-40 border-t border-white/5 flex-shrink-0">
             {/* Left side: Clock or Meeting Name */}
             <div className="flex-1 hidden md:flex items-center gap-4">
                 <div className="text-slate-200 font-medium">
@@ -464,9 +483,19 @@ function MeetingControls({ onToggleChat, onToggleParticipants, onToggleSettings 
     );
 }
 
-function ParticipantsSidebar({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
-    const participants = useParticipants();
-
+function ParticipantsSidebar({
+    isOpen,
+    onClose,
+    tracks,
+    pinnedTrack,
+    setPinnedTrack
+}: {
+    isOpen: boolean,
+    onClose: () => void,
+    tracks: TrackReferenceOrPlaceholder[],
+    pinnedTrack: TrackReferenceOrPlaceholder | null,
+    setPinnedTrack: (t: TrackReferenceOrPlaceholder | null) => void
+}) {
     if (!isOpen) return null;
 
     return (
@@ -483,35 +512,53 @@ function ParticipantsSidebar({ isOpen, onClose }: { isOpen: boolean, onClose: ()
 
             <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2">
                 <div className="px-2 py-1 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                    In Call ({participants.length})
+                    In Call ({tracks.length})
                 </div>
-                {participants.map((p) => (
-                    <div
-                        key={p.sid}
-                        className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors group"
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-[#2D2D2D] border border-white/5 flex items-center justify-center font-bold text-[#7A00E1] relative">
-                                {p.identity.charAt(0).toUpperCase()}
-                                {p.isSpeaking && (
-                                    <div className="absolute -inset-1 border-2 border-[#7A00E1] rounded-full animate-pulse" />
-                                )}
+                {tracks.map((track) => {
+                    const p = track.participant;
+                    const isPinned = pinnedTrack?.participant.sid === p.sid;
+
+                    return (
+                        <div
+                            key={`${p.sid}-${track.source}`}
+                            className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-[#2D2D2D] border border-white/5 flex items-center justify-center font-bold text-[#7A00E1] relative">
+                                    {p.identity.charAt(0).toUpperCase()}
+                                    {p.isSpeaking && (
+                                        <div className="absolute -inset-1 border-2 border-[#7A00E1] rounded-full animate-pulse" />
+                                    )}
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="font-semibold text-sm flex items-center gap-2 truncate">
+                                        {p.identity}
+                                        {p.isLocal && <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-slate-400">You</span>}
+                                    </p>
+                                    <p className="text-xs text-slate-500">Participant</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="font-semibold text-sm flex items-center gap-2">
-                                    {p.identity}
-                                    {p.isLocal && <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-slate-400">You</span>}
-                                </p>
-                                <p className="text-xs text-slate-500">Participant</p>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setPinnedTrack(isPinned ? null : track)}
+                                    className={cn(
+                                        "p-2 rounded-lg transition-all",
+                                        isPinned ? "bg-blue-500 text-white" : "hover:bg-white/10 text-slate-400 opacity-60 group-hover:opacity-100"
+                                    )}
+                                    title={isPinned ? "Unpin" : "Pin"}
+                                >
+                                    {isPinned ? <PinOff size={14} /> : <Pin size={14} />}
+                                </button>
+                                <div className="flex items-center gap-1 opacity-60">
+                                    {!p.isMicrophoneEnabled && <MicIcon size={14} className="text-red-500" />}
+                                    {!p.isCameraEnabled && <VideoIcon size={14} className="text-red-500" />}
+                                </div>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                            {!p.isMicrophoneEnabled && <MicIcon size={14} className="text-red-500" />}
-                            {!p.isCameraEnabled && <VideoIcon size={14} className="text-red-500" />}
-                        </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );
 }
+
