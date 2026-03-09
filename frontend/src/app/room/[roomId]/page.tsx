@@ -26,6 +26,7 @@ import { TrackReferenceOrPlaceholder } from '@livekit/components-core';
 
 export default function RoomPage() {
     const { roomId } = useParams();
+    const router = useRouter();
     const [token, setToken] = useState<string | null>(null);
     const [userName, setUserName] = useState<string>('');
     const [isChatOpen, setIsChatOpen] = useState(false);
@@ -37,6 +38,11 @@ export default function RoomPage() {
         const storedName = localStorage.getItem('meet_user_name') || `User-${Math.floor(Math.random() * 1000)}`;
         const micPref = localStorage.getItem('meet_mic_pref') !== 'false';
         const videoPref = localStorage.getItem('meet_video_pref') !== 'false';
+
+        if (!localStorage.getItem('meet_user_name')) {
+            router.push(`/m/${roomId}`);
+            return;
+        }
 
         setUserName(storedName);
         setMicEnabled(micPref);
@@ -170,12 +176,14 @@ function SettingsModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => vo
 }
 
 function RoomHeader({ title }: { title: string }) {
+    const { roomId } = useParams();
     const router = useRouter();
     const [isCopied, setIsCopied] = useState(false);
     const [showInfo, setShowInfo] = useState(false);
 
     const copyLink = () => {
-        navigator.clipboard.writeText(window.location.href);
+        const joinUrl = `${window.location.origin}/m/${roomId}`;
+        navigator.clipboard.writeText(joinUrl);
         setIsCopied(true);
         setTimeout(() => setIsCopied(false), 2000);
     };
@@ -212,7 +220,7 @@ function RoomHeader({ title }: { title: string }) {
                                     </div>
                                     <div className="space-y-1">
                                         <p className="text-xs text-slate-400 uppercase font-bold tracking-widest">Joining info</p>
-                                        <p className="text-sm text-slate-200 break-all">{window.location.href}</p>
+                                        <p className="text-sm text-slate-200 break-all">{`${window.location.origin}/m/${roomId}`}</p>
                                     </div>
                                     <button
                                         onClick={copyLink}
@@ -347,12 +355,14 @@ function ReactionOverlay() {
 }
 
 function MeetingControls({ onToggleChat, onToggleSettings }: { onToggleChat: () => void, onToggleSettings: () => void }) {
+    const { roomId } = useParams();
     const { addReaction, toggleRaiseHand, raisedHands, socket } = useRoom();
     const isHandRaised = socket ? raisedHands.includes(socket.id!) : false;
     const [isCopied, setIsCopied] = useState(false);
 
     const shareMeeting = () => {
-        navigator.clipboard.writeText(window.location.href);
+        const joinUrl = `${window.location.origin}/m/${roomId}`;
+        navigator.clipboard.writeText(joinUrl);
         setIsCopied(true);
         setTimeout(() => setIsCopied(false), 2000);
     };
