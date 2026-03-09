@@ -50,7 +50,7 @@ export default function RoomPage() {
 
         async function getToken() {
             try {
-                const resp = await fetch(`${process.env.NEXT_PUBLIC_SIGNALING_SERVER || 'http://localhost:4000'}/api/token`, {
+                const resp = await fetch(`${process.env.NEXT_PUBLIC_SIGNALING_SERVER || 'https://quickmeet-ue6h.onrender.com'}/api/token`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ room: roomId, username: storedName }),
