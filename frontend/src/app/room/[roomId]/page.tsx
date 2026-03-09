@@ -30,6 +30,7 @@ export default function RoomPage() {
     const [token, setToken] = useState<string | null>(null);
     const [userName, setUserName] = useState<string>('');
     const [isChatOpen, setIsChatOpen] = useState(false);
+    const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [micEnabled, setMicEnabled] = useState(true);
     const [videoEnabled, setVideoEnabled] = useState(true);
@@ -94,10 +95,18 @@ export default function RoomPage() {
                         </div>
 
                         <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+                        <ParticipantsSidebar isOpen={isParticipantsOpen} onClose={() => setIsParticipantsOpen(false)} />
                     </div>
 
                     <MeetingControls
-                        onToggleChat={() => setIsChatOpen(!isChatOpen)}
+                        onToggleChat={() => {
+                            setIsChatOpen(!isChatOpen);
+                            setIsParticipantsOpen(false);
+                        }}
+                        onToggleParticipants={() => {
+                            setIsParticipantsOpen(!isParticipantsOpen);
+                            setIsChatOpen(false);
+                        }}
                         onToggleSettings={() => setIsSettingsOpen(!isSettingsOpen)}
                     />
                     <RoomAudioRenderer />
@@ -354,11 +363,12 @@ function ReactionOverlay() {
     );
 }
 
-function MeetingControls({ onToggleChat, onToggleSettings }: { onToggleChat: () => void, onToggleSettings: () => void }) {
+function MeetingControls({ onToggleChat, onToggleParticipants, onToggleSettings }: { onToggleChat: () => void, onToggleParticipants: () => void, onToggleSettings: () => void }) {
     const { roomId } = useParams();
     const { addReaction, toggleRaiseHand, raisedHands, socket } = useRoom();
     const isHandRaised = socket ? raisedHands.includes(socket.id!) : false;
     const [isCopied, setIsCopied] = useState(false);
+    const participants = useParticipants();
 
     const shareMeeting = () => {
         const joinUrl = `${window.location.origin}/m/${roomId}`;
@@ -433,8 +443,14 @@ function MeetingControls({ onToggleChat, onToggleSettings }: { onToggleChat: () 
                     <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-slate-950 animate-pulse" />
                 </button>
 
-                <button className="control-icon-btn bg-white/5 hover:bg-white/10">
+                <button
+                    onClick={onToggleParticipants}
+                    className="control-icon-btn bg-white/5 hover:bg-white/10 relative"
+                >
                     <Users size={22} />
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#7A00E1] text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-[#1A1A1A]">
+                        {participants.length}
+                    </span>
                 </button>
 
                 <button
@@ -443,6 +459,58 @@ function MeetingControls({ onToggleChat, onToggleSettings }: { onToggleChat: () 
                 >
                     <Settings size={22} />
                 </button>
+            </div>
+        </div>
+    );
+}
+
+function ParticipantsSidebar({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
+    const participants = useParticipants();
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="sidebar-panel">
+            <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                <h3 className="text-xl font-bold flex items-center gap-3">
+                    <Users className="text-[#7A00E1]" />
+                    People
+                </h3>
+                <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                    <LogOut size={20} className="rotate-45" />
+                </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2">
+                <div className="px-2 py-1 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                    In Call ({participants.length})
+                </div>
+                {participants.map((p) => (
+                    <div
+                        key={p.sid}
+                        className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors group"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-[#2D2D2D] border border-white/5 flex items-center justify-center font-bold text-[#7A00E1] relative">
+                                {p.identity.charAt(0).toUpperCase()}
+                                {p.isSpeaking && (
+                                    <div className="absolute -inset-1 border-2 border-[#7A00E1] rounded-full animate-pulse" />
+                                )}
+                            </div>
+                            <div>
+                                <p className="font-semibold text-sm flex items-center gap-2">
+                                    {p.identity}
+                                    {p.isLocal && <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-slate-400">You</span>}
+                                </p>
+                                <p className="text-xs text-slate-500">Participant</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                            {!p.isMicrophoneEnabled && <MicIcon size={14} className="text-red-500" />}
+                            {!p.isCameraEnabled && <VideoIcon size={14} className="text-red-500" />}
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );

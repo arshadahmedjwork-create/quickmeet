@@ -42,7 +42,11 @@ body {
 
   /* Adaptive video grid styles */
   .participant-tile {
-    @apply relative overflow-hidden rounded-2xl bg-[#1A1A1A] border border-white/5 shadow-2xl transition-all duration-300;
+    @apply relative overflow-hidden rounded-2xl bg-[#1A1A1A] border border-white/5 shadow-2xl transition-all duration-300 aspect-video;
+  }
+
+  .participant-tile video {
+    @apply object-contain w-full h-full;
   }
 
   .control-icon-btn {
@@ -55,6 +59,22 @@ body {
 
   .control-icon-btn.danger {
     @apply bg-red-500 hover:bg-red-600 text-white;
+  }
+
+  .sidebar-panel {
+    @apply w-80 bg-[#1A1A1A]/95 backdrop-blur-2xl border-l border-white/5 flex flex-col h-full z-40 shadow-2xl;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-white/10 rounded-full hover:bg-white/20;
   }
 }
 
