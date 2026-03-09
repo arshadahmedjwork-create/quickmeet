@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #7A00E1;
+  --color-background: #2D2D2D;
+  --color-accent: #7A00E1;
+  --color-muted: #3D3D3D;
+  --color-foreground: #F8FAFC;
+}
+
+:root {
+  --primary: #7A00E1;
+  --background: #2D2D2D;
+  --accent: #7A00E1;
+  --muted: #3D3D3D;
+  --foreground: #F8FAFC;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif;
+  overflow-x: hidden;
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl;
+  }
+
+  .glass-button {
+    @apply px-4 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl transition-all duration-200 active:scale-95 flex items-center gap-2;
+  }
+
+  .primary-button {
+    @apply px-6 py-3 bg-[#7A00E1] hover:bg-[#8A10F1] text-white rounded-xl transition-all duration-200 active:scale-95 shadow-lg shadow-violet-500/20 font-medium;
+  }
+
+  .grid-layout {
+    @apply gap-4 p-4 h-full w-full transition-all duration-500;
+  }
+
+  /* Adaptive video grid styles */
+  .participant-tile {
+    @apply relative overflow-hidden rounded-2xl bg-[#1A1A1A] border border-white/5 shadow-2xl transition-all duration-300;
+  }
+
+  .control-icon-btn {
+    @apply p-4 rounded-full transition-all duration-300 hover:bg-white/10 active:scale-90 text-white flex items-center justify-center;
+  }
+
+  .control-icon-btn.active {
+    @apply bg-[#7A00E1] text-white hover:bg-[#8A10F1];
+  }
+
+  .control-icon-btn.danger {
+    @apply bg-red-500 hover:bg-red-600 text-white;
+  }
+}
+
+/* Custom LiveKit Overrides */
+.lk-video-conference {
+  @apply !bg-transparent !border-none;
+}
+
+.lk-control-bar {
+  @apply !bg-transparent !border-none !p-0;
+}
+
+/* Animations */
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(-150px) scale(2);
+    opacity: 0;
+  }
+}
+
+.reaction-animation {
+  animation: floatUp 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
